@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shadi Booking System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', Arial, sans-serif;
+      background: linear-gradient(120deg, #050505 0%, #101a2b 40%, #1e3a8a 100%);
+      background-size: 200% 200%;
+      animation: darkbluefade 24s ease-in-out infinite alternate;
+      transition: background 1s;
+    }
+    /* Animated background for logged-in state */
+    body.logged-in {
+      animation: darkbluefade 24s ease-in-out infinite alternate;
+    }
+    @keyframes darkbluefade {
+      0% {
+        background: linear-gradient(120deg, #050505 0%, #101a2b 40%, #1e3a8a 100%);
+        background-position: 0% 50%;
+      }
+      50% {
+        background: linear-gradient(120deg, #1e3a8a 0%, #101a2b 60%, #050505 100%);
+        background-position: 100% 50%;
+      }
+      100% {
+        background: linear-gradient(120deg, #050505 0%, #101a2b 40%, #1e3a8a 100%);
+        background-position: 0% 50%;
+      }
+    }
+    .container {
+      max-width: 1200px;
+      margin: 48px auto;
+      background: rgba(20, 24, 40, 0.92);
+      padding: 36px 32px 32px 32px;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px 0 rgba(30, 58, 138, 0.25), 0 1.5px 8px 0 #0002;
+      backdrop-filter: blur(2px);
+      color: #eaf1fa;
+      transition: box-shadow 0.3s, background 0.3s;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .container::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 120%;
+      height: 120%;
+      background: radial-gradient(ellipse at center, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 60%, rgba(255,255,255,0.01) 100%);
+      filter: blur(32px);
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.85;
+      transition: opacity 0.4s;
+    }
+    .container::after {
+      content: '';
+      position: absolute;
+      top: var(--spot-y, 50%);
+      left: var(--spot-x, 50%);
+      width: 220px;
+      height: 220px;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 60%, rgba(255,255,255,0.01) 100%);
+      opacity: var(--spot-opacity, 0);
+      border-radius: 50%;
+      filter: blur(18px);
+      transform: translate(-50%, -50%);
+      transition: top 0.18s cubic-bezier(.4,1.6,.6,1), left 0.18s cubic-bezier(.4,1.6,.6,1), opacity 0.3s;
+      z-index: 2;
+      will-change: top, left, opacity;
+    }
+    .container:hover {
+      background: rgba(20, 24, 40, 0.72);
+      box-shadow: 0 12px 48px 0 rgba(255,255,255,0.18), 0 8px 32px 0 rgba(30, 58, 138, 0.25), 0 1.5px 8px 0 #0002;
+      backdrop-filter: blur(8px) saturate(1.2);
+      border: 1.5px solid rgba(255,255,255,0.18);
+    }
+    .main-flex {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .sidebar-bookings {
+      flex: 1 1 500px;
+      max-width: 500px;
+      background: rgba(16, 25, 43, 0.98);
+      border-radius: 22px;
+      box-shadow: 0 4px 24px #1e3a8a33, 0 1.5px 8px #0002;
+      padding: 24px 18px 18px 18px;
+      margin-bottom: 18px;
+      min-width: 0;
+      transition: box-shadow 0.3s, background 0.3s;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .sidebar-bookings h3 {
+      margin-top: 0;
+      margin-bottom: 18px;
+      font-size: 1.25rem;
+      color: #60a5fa;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      text-align: left;
+    }
+    .bookings-table-container {
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: transparent;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 8px #1e3a8a22;
+      transition: background 0.3s;
+    }
+    th, td {
+      border: none;
+      padding: 12px 10px;
+      text-align: left;
+      font-size: 1em;
+      background: transparent;
+    }
+    th {
+      background: #1e3a8a;
+      color: #eaf1fa;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    tr.booking-row {
+      transition: background 0.4s, box-shadow 0.3s;
+      border-radius: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    tr.booking-row:hover {
+      background: linear-gradient(90deg, rgba(59,130,246,0.18) 0%, rgba(236,72,153,0.18) 50%, rgba(16,185,129,0.18) 100%);
+      box-shadow: 0 2px 16px 0 rgba(59,130,246,0.18), 0 1.5px 8px 0 #0002;
+      z-index: 2;
+      animation: rgbglow 2.5s linear infinite alternate;
+    }
+    @keyframes rgbglow {
+      0% { box-shadow: 0 2px 16px 0 rgba(59,130,246,0.18), 0 1.5px 8px 0 #0002; }
+      50% { box-shadow: 0 4px 24px 0 rgba(236,72,153,0.22), 0 1.5px 8px 0 #0002; }
+      100% { box-shadow: 0 2px 16px 0 rgba(16,185,129,0.18), 0 1.5px 8px 0 #0002; }
+    }
+    .right-content {
+      flex: 2 1 420px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .user-info {
+      margin-bottom: 10px;
+      font-size: 1.08em;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+    form {
+      margin-bottom: 28px;
+      background: rgba(30, 58, 138, 0.08);
+      padding: 18px 14px 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px #0001;
+      transition: background 0.3s;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #b6c7e3;
+      letter-spacing: 0.01em;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      border: 1.5px solid #233a5e;
+      background: #10192b;
+      color: #eaf1fa;
+      border-radius: 6px;
+      font-size: 1em;
+      transition: border 0.2s, background 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #3b82f6;
+      background: #172554;
+      outline: none;
+    }
+    button {
+      background: linear-gradient(90deg, #2563eb 0%, #1e3a8a 100%);
+      color: #fff;
+      border: none;
+      padding: 11px 22px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.08em;
+      font-weight: 600;
+      box-shadow: 0 2px 8px #1e3a8a33;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+    button:hover, button:focus {
+      background: linear-gradient(90deg, #1e40af 0%, #2563eb 100%);
+      box-shadow: 0 4px 16px #1e3a8a44;
+      transform: translateY(-2px) scale(1.03);
+    }
+    button:disabled {
+      background: #334155;
+      color: #b6c7e3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .alert {
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      font-size: 1em;
+      font-weight: 500;
+      box-shadow: 0 1px 6px #0002;
+      opacity: 0.97;
+      transition: opacity 0.3s;
+    }
+    .alert-success {
+      background: linear-gradient(90deg, #22d3ee 0%, #2563eb 100%);
+      color: #0f172a;
+    }
+    .alert-error {
+      background: linear-gradient(90deg, #f87171 0%, #1e293b 100%);
+      color: #fff;
+    }
+    .hidden { display: none; }
+    ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+    #logout-btn {
+      float: right;
+      background: linear-gradient(90deg, #f87171 0%, #1e293b 100%);
+      color: #fff;
+      font-size: 0.98em;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      box-shadow: 0 1px 6px #b91c1c33;
+      margin-left: 10px;
+      margin-top: -4px;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+    #logout-btn:hover, #logout-btn:focus {
+      background: linear-gradient(90deg, #b91c1c 0%, #1e293b 100%);
+      box-shadow: 0 2px 12px #b91c1c44;
+      transform: translateY(-1px) scale(1.04);
+    }
+    #user-email {
+      font-weight: 600;
+      color: #38bdf8;
+      font-size: 1.08em;
+    }
+    /* Responsive Styles */
+    @media (max-width: 1100px) {
+      .main-flex {
+        flex-direction: column;
+        gap: 0;
+      }
+      .sidebar-bookings {
+        max-width: 100vw;
+        margin-bottom: 24px;
+      }
+      .right-content {
+        width: 100%;
+      }
+    }
+    @media (max-width: 900px) {
+      .container {
+        max-width: 98vw;
+        padding: 24px 4vw 18px 4vw;
+      }
+      h2 { font-size: 1.5rem; }
+      form { padding: 10px 4px 6px 4px; }
+      th, td { font-size: 0.98em; padding: 8px 4px; }
+    }
+    @media (max-width: 600px) {
+      .container {
+        max-width: 100vw;
+        padding: 10px 2vw 10px 2vw;
+        border-radius: 0;
+        margin: 0;
+        box-shadow: none;
+      }
+      h2 { font-size: 1.1rem; }
+      form { padding: 6px 2px 4px 2px; }
+      th, td { font-size: 0.95em; padding: 6px 2px; }
+      #logout-btn { padding: 6px 10px; font-size: 0.92em; }
+    }
+    .user-emails-tile {
+      background: rgba(24, 32, 56, 0.92);
+      border-radius: 18px;
+      box-shadow: 0 2px 16px #1e3a8a22, 0 1.5px 8px #0002;
+      padding: 18px 12px 12px 12px;
+      margin-top: 0;
+      margin-bottom: 0;
+      transition: box-shadow 0.3s, background 0.3s;
+      overflow: hidden;
+    }
+    .user-emails-tile h4 {
+      margin: 0 0 10px 0;
+      color: #60a5fa;
+      font-size: 1.08rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .user-emails-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: transparent;
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 0.98em;
+    }
+    .user-emails-table th, .user-emails-table td {
+      padding: 10px 8px;
+      text-align: left;
+      border: none;
+    }
+    .user-emails-table th {
+      background: #233a5e;
+      color: #eaf1fa;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .user-emails-table tr:nth-child(even) td {
+      background: #10192b;
+    }
+    .user-emails-table tr:nth-child(odd) td {
+      background: #172554;
+    }
+    .user-emails-table tr:hover td {
+      background: linear-gradient(90deg, #1e3a8a22 0%, #2563eb22 100%);
+      color: #fff;
+      transition: background 0.2s, color 0.2s;
+    }
+    #auth-section {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    #auth-choice {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      width: 100%;
+      min-height: 320px;
+    }
+    #auth-choice button {
+      width: 210px;
+      font-size: 1.18em;
+      font-weight: 600;
+      padding: 16px 0;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
+      color: #fff;
+      box-shadow: 0 2px 12px #1e3a8a33;
+      margin: 0 0 0 0;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+    }
+    #auth-choice button:hover, #auth-choice button:focus {
+      background: linear-gradient(90deg, #2563eb 0%, #1e3a8a 100%);
+      box-shadow: 0 4px 24px #1e3a8a44;
+      transform: translateY(-2px) scale(1.04);
+    }
+    .search-bar-card {
+      background: rgba(24, 32, 56, 0.92);
+      border-radius: 999px;
+      box-shadow: 0 2px 12px #1e3a8a22, 0 1.5px 8px #0002;
+      padding: 10px 12px 8px 12px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.3s, background 0.3s;
+    }
+    .search-bar-inner {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      background: rgba(16, 25, 43, 0.98);
+      border-radius: 999px;
+      padding: 0 18px 0 14px;
+      box-shadow: 0 1px 4px #0001;
+      border: 1.5px solid #233a5e;
+      transition: border 0.2s, box-shadow 0.2s;
+      height: 48px;
+      min-height: 48px;
+    }
+    .search-bar-inner:focus-within {
+      border: 1.5px solid #3b82f6;
+      box-shadow: 0 2px 8px #2563eb33;
+    }
+    .search-icon {
+      color: #60a5fa;
+      font-size: 1.3em;
+      margin-right: 10px;
+      user-select: none;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      height: 100%;
+    }
+    #booking-search {
+      width: 100%;
+      padding: 0 0 0 0;
+      border: none;
+      background: transparent;
+      color: #eaf1fa;
+      font-size: 1.08em;
+      border-radius: 999px;
+      outline: none;
+      height: 44px;
+      line-height: 44px;
+      display: flex;
+      align-items: center;
+      transition: background 0.2s, color 0.2s;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Shadi Booking System <button id="logout-btn" class="hidden">Logout</button></h2>
+    <div id="alert-container"></div>
+    <div id="auth-section">
+      <div id="auth-choice" style="display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 32px 0;">
+        <button id="show-signup-btn" style="width: 180px; font-size: 1.1em;">Sign Up</button>
+        <button id="show-login-btn" style="width: 180px; font-size: 1.1em;">Login</button>
+      </div>
+      <form id="signup-form" style="display:none; max-width: 340px; margin: 0 auto;">
+        <h3>Sign Up</h3>
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" required />
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" required minlength="6" />
+        <label for="signup-role">Role</label>
+        <select id="signup-role" required>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Sign Up</button>
+        <button type="button" id="back-to-choice-signup" style="margin-left: 10px; background: #334155; color: #fff;">Back</button>
+      </form>
+      <form id="login-form" style="display:none; max-width: 340px; margin: 0 auto;">
+        <h3>Login</h3>
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required />
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required />
+        <button type="submit">Login</button>
+        <button type="button" id="back-to-choice-login" style="margin-left: 10px; background: #334155; color: #fff;">Back</button>
+      </form>
+    </div>
+    <div id="booking-section" class="hidden">
+      <div class="main-flex">
+        <aside class="sidebar-bookings">
+          <div class="search-bar-card">
+            <div class="search-bar-inner">
+              <span class="search-icon">&#128269;</span>
+              <input id="booking-search" type="text" placeholder="Search bookings by name..." />
+            </div>
+          </div>
+          <h3>Your Bookings</h3>
+          <div class="bookings-table-container" id="bookings-table-container"></div>
+          <div class="user-emails-tile">
+            <h4>All User Emails</h4>
+            <div id="user-emails-table-container"></div>
+          </div>
+        </aside>
+        <section class="right-content">
+          <div class="user-info">Logged in as: <span id="user-email"></span></div>
+          <form id="booking-form">
+            <h3>Submit Booking</h3>
+            <label for="event-type">Event Type</label>
+            <select id="event-type" required>
+              <option value="">Select Event</option>
+              <option value="Mehndi">Mehndi</option>
+              <option value="Barat">Barat</option>
+              <option value="Walima">Walima</option>
+            </select>
+            <label for="name">Name</label>
+            <input type="text" id="name" required />
+            <label for="date">Date</label>
+            <input type="date" id="date" required />
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" required pattern="[0-9\-\+\s]{7,15}" />
+            <button type="submit">Submit Booking</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+  <script>
+    // --- Supabase Setup ---
+    const SUPABASE_URL = 'https://xdhfxbltvjvecyocbdst.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkaGZ4Ymx0dmp2ZWN5b2NiZHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTk5OTksImV4cCI6MjA2NjczNTk5OX0.1DyO-qKkukcW9G0_HlMQ2xKV0eosE2iLRxKz4TMg_ds';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    });
+
+    // --- DOM Elements ---
+    const alertContainer = document.getElementById('alert-container');
+    const authSection = document.getElementById('auth-section');
+    const bookingSection = document.getElementById('booking-section');
+    const signupForm = document.getElementById('signup-form');
+    const loginForm = document.getElementById('login-form');
+    const logoutBtn = document.getElementById('logout-btn');
+    const bookingForm = document.getElementById('booking-form');
+    const bookingsTableContainer = document.getElementById('bookings-table-container');
+    const userEmailSpan = document.getElementById('user-email');
+
+    // --- State ---
+    let currentUser = null;
+    let currentRole = null;
+    let selectedUserId = null;
+    let allBookings = [];
+
+    // --- Utility Functions ---
+    function showAlert(message, type = 'success', timeout = 4000) {
+      alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+      if (timeout) {
+        setTimeout(() => { alertContainer.innerHTML = ''; }, timeout);
+      }
+    }
+    function clearAlert() { alertContainer.innerHTML = ''; }
+    function showSection(isLoggedIn) {
+      if (isLoggedIn) {
+        authSection.style.display = 'none';
+        bookingSection.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        document.body.classList.add('logged-in');
+      } else {
+        authSection.style.display = '';
+        bookingSection.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        document.body.classList.remove('logged-in');
+        showAuthChoice();
+      }
+    }
+    function renderBookingsTable(bookings) {
+      allBookings = bookings;
+      const searchValue = (document.getElementById('booking-search')?.value || '').toLowerCase();
+      let filtered = bookings;
+      if (searchValue) {
+        filtered = bookings.filter(b => b.name && b.name.toLowerCase().includes(searchValue));
+      }
+      if (!filtered.length) {
+        bookingsTableContainer.innerHTML = '<p>No bookings found.</p>';
+        return;
+      }
+      let html = `<table><thead><tr><th>Event Type</th><th>Name</th><th style='min-width:120px;width:22%'>Date</th><th>Phone</th></tr></thead><tbody>`;
+      for (const b of filtered) {
+        html += `<tr class=\"booking-row\">`;
+        html += `<td class=\"editable-cell\" data-field=\"event_type\">${b.event_type}</td>`;
+        html += `<td class=\"editable-cell\" data-field=\"name\">${b.name}</td>`;
+        html += `<td class=\"editable-cell\" data-field=\"date\" style='min-width:120px;width:22%'>${b.date}</td>`;
+        html += `<td class=\"editable-cell\" data-field=\"phone\">${b.phone}</td>`;
+        html += `</tr>`;
+      }
+      html += '</tbody></table>';
+      bookingsTableContainer.innerHTML = html;
+
+      // Add inline edit listeners
+      document.querySelectorAll('.booking-row').forEach((row, idx) => {
+        const booking = filtered[idx];
+        row.querySelectorAll('.editable-cell').forEach(cell => {
+          const field = cell.getAttribute('data-field');
+          // Allow editing name, phone, date, event_type
+          if (["name","phone","date","event_type"].includes(field) && (currentRole === 'admin' || (currentUser && booking.user_id === currentUser.id))) {
+            cell.style.cursor = 'pointer';
+            cell.title = 'Click to edit';
+            cell.addEventListener('click', (e) => handleBookingEdit(e, booking, field));
+            cell.addEventListener('mouseenter', () => cell.style.background = 'rgba(59,130,246,0.10)');
+            cell.addEventListener('mouseleave', () => cell.style.background = '');
+          }
+        });
+      });
+    }
+    function renderUsersList(users) {
+      if (!users || users.length === 0) {
+        document.getElementById('user-emails-table-container').innerHTML = '<p style="color:#b6c7e3;">No users found.</p>';
+        return;
+      }
+      let html = `<table class="user-emails-table"><thead><tr><th>#</th><th>Email</th><th>Action</th></tr></thead><tbody>`;
+      users.forEach((u, i) => {
+        html += `<tr class="user-row" data-user-id="${u.id}" style="cursor:pointer;${selectedUserId === u.id ? 'background:rgba(59,130,246,0.18);' : ''}">
+          <td>${i + 1}</td>
+          <td>${u.email}</td>
+          <td><button class="delete-user-btn" data-user-id="${u.id}" title="Delete User" style="background:transparent;border:none;color:#f87171;font-size:1.2em;cursor:pointer;">&#128465;</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('user-emails-table-container').innerHTML = html;
+
+      // Add click listeners for user row selection
+      document.querySelectorAll('.user-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+          // Prevent row click if delete button is clicked
+          if (e.target.classList.contains('delete-user-btn')) return;
+          selectedUserId = this.getAttribute('data-user-id');
+          renderUsersList(users);
+          loadBookingsAndUsers();
+        });
+      });
+      // Add click listeners for delete buttons
+      document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+          e.stopPropagation();
+          const userId = this.getAttribute('data-user-id');
+          if (confirm('Are you sure you want to delete this user?')) {
+            // Delete from profiles
+            await supabase.from('profiles').delete().eq('id', userId);
+            // Delete from auth.users via backend function (not possible from client directly)
+            try {
+              // Replace '/delete-user' with your actual backend endpoint
+              const resp = await fetch(`/delete-user?id=${userId}`, { method: 'DELETE' });
+              if (!resp.ok) throw new Error('Failed to delete from auth.users');
+            } catch (err) {
+              showAlert('User deleted from profiles, but failed to delete from auth.users. (Requires backend function)', 'error');
+            }
+            showAlert('User deleted.');
+            selectedUserId = null;
+            // Remove user row from UI and update users list in memory
+            const userRow = this.closest('tr');
+            userRow.parentNode.removeChild(userRow);
+            // Remove user from users array and re-render without reload
+            const userIdStr = String(userId);
+            let users = [];
+            document.querySelectorAll('.user-row').forEach(row => {
+              if (row.getAttribute('data-user-id') !== userIdStr) {
+                const tds = row.querySelectorAll('td');
+                users.push({
+                  id: row.getAttribute('data-user-id'),
+                  email: tds[1].textContent
+                });
+              }
+            });
+            renderUsersList(users);
+            // Optionally refresh bookings if the deleted user was selected
+            if (selectedUserId === userId) {
+              selectedUserId = null;
+              loadBookingsAndUsers();
+            }
+          }
+        });
+      });
+      // Add a 'Show All' button if a user is selected
+      if (selectedUserId) {
+        const showAllBtn = document.createElement('button');
+        showAllBtn.textContent = 'Show All Bookings';
+        showAllBtn.style = 'margin:10px 0 0 0;padding:6px 16px;border-radius:8px;background:#2563eb;color:#fff;border:none;font-weight:600;cursor:pointer;';
+        showAllBtn.onclick = function(e) {
+          selectedUserId = null;
+          renderUsersList(users);
+          loadBookingsAndUsers();
+        };
+        document.getElementById('user-emails-table-container').appendChild(showAllBtn);
+      }
+    }
+    function isTokenExpired(session) {
+      if (!session) return true;
+      const now = Math.floor(Date.now() / 1000);
+      return session.expires_at && session.expires_at < now;
+    }
+
+    // --- Auth & Session Management ---
+    async function checkSessionAndInit() {
+      // Get session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        showAlert('Error fetching session: ' + error.message, 'error');
+        showSection(false);
+        return;
+      }
+      if (!session || isTokenExpired(session)) {
+        showSection(false);
+        return;
+      }
+      // Get user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        showSection(false);
+        return;
+      }
+      currentUser = user;
+      // Fetch role from profiles table
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      currentRole = profile?.role || 'user';
+      userEmailSpan.textContent = user.email;
+      showSection(true);
+      await loadBookingsAndUsers();
+    }
+
+    // --- Auth choice logic
+    const authChoice = document.getElementById('auth-choice');
+    const showSignupBtn = document.getElementById('show-signup-btn');
+    const showLoginBtn = document.getElementById('show-login-btn');
+    const backToChoiceSignup = document.getElementById('back-to-choice-signup');
+    const backToChoiceLogin = document.getElementById('back-to-choice-login');
+    // Show only buttons at first
+    function showAuthChoice() {
+      authChoice.style.display = '';
+      signupForm.style.display = 'none';
+      loginForm.style.display = 'none';
+    }
+    showAuthChoice();
+    showSignupBtn.addEventListener('click', () => {
+      authChoice.style.display = 'none';
+      signupForm.style.display = '';
+      loginForm.style.display = 'none';
+    });
+    showLoginBtn.addEventListener('click', () => {
+      authChoice.style.display = 'none';
+      signupForm.style.display = 'none';
+      loginForm.style.display = '';
+    });
+    backToChoiceSignup.addEventListener('click', showAuthChoice);
+    backToChoiceLogin.addEventListener('click', showAuthChoice);
+
+    // --- Signup ---
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      const role = document.getElementById('signup-role').value;
+      const { data, error } = await supabase.auth.signUp({
+        email, password
+      });
+      if (error) {
+        showAlert('Signup error: ' + error.message, 'error');
+        return;
+      }
+      // Insert into profiles table (ignore error if already exists)
+      await supabase.from('profiles').upsert({ id: data.user?.id, email, role });
+      // --- Ensure session and user are refreshed after signup ---
+      let user = data.user;
+      if (!user) {
+        // Try to get user from session
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData && sessionData.session && sessionData.session.user) {
+          user = sessionData.session.user;
+        } else {
+          // Fallback: try getUser
+          const { data: userData } = await supabase.auth.getUser();
+          user = userData?.user;
+        }
+      }
+      if (!user) {
+        showAlert('Signup succeeded but could not fetch user session. Please log in.', 'error');
+        return;
+      }
+      currentUser = user;
+      currentRole = role;
+      userEmailSpan.textContent = email;
+      showSection(true);
+      await loadBookingsAndUsers();
+      signupForm.reset();
+      showAlert('Signup successful! You are now logged in.', 'success', 4000);
+    });
+   
+
+    // --- Login ---
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        showAlert('Login error: ' + error.message, 'error');
+        return;
+      }
+      // No email confirmation check
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUser = user;
+      // Fetch role from profiles table
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      currentRole = profile?.role || 'user';
+      userEmailSpan.textContent = user.email;
+      showSection(true);
+      await loadBookingsAndUsers();
+      loginForm.reset();
+    });
+
+    // --- Logout ---
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      currentUser = null;
+      showSection(false);
+      showAlert('Logged out.', 'success');
+    });
+
+    // --- Booking Submission ---
+    bookingForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+      if (!currentUser) {
+        showAlert('You must be logged in to submit bookings.', 'error');
+        return;
+      }
+      const event_type = document.getElementById('event-type').value;
+      const name = document.getElementById('name').value.trim();
+      const date = document.getElementById('date').value;
+      const phone = document.getElementById('phone').value.trim();
+      if (!event_type || !name || !date || !phone) {
+        showAlert('Please fill all fields.', 'error');
+        return;
+      }
+      const { error } = await supabase.from('bookings').insert({
+        event_type, name, date, phone, user_id: currentUser.id
+      });
+      if (error) {
+        showAlert('Booking error: ' + error.message, 'error');
+        return;
+      }
+      showAlert('Booking submitted!', 'success');
+      bookingForm.reset();
+      await loadBookingsAndUsers();
+    });
+
+    // --- Load Bookings & Users ---
+    async function loadBookingsAndUsers() {
+      if (!currentUser) return;
+      // Bookings
+      let bookings, bookingsError;
+      if (currentRole === 'admin') {
+        if (selectedUserId) {
+          ({ data: bookings, error: bookingsError } = await supabase
+            .from('bookings')
+            .select('id, event_type, name, date, phone, user_id')
+            .eq('user_id', selectedUserId)
+            .order('date', { ascending: true }));
+        } else {
+          ({ data: bookings, error: bookingsError } = await supabase
+            .from('bookings')
+            .select('id, event_type, name, date, phone, user_id')
+            .order('date', { ascending: true }));
+        }
+      } else {
+        ({ data: bookings, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('id, event_type, name, date, phone, user_id')
+          .eq('user_id', currentUser.id)
+          .order('date', { ascending: true }));
+      }
+      if (bookingsError) {
+        renderBookingsTable([]);
+        showAlert('Error loading bookings: ' + bookingsError.message, 'error');
+      } else {
+        renderBookingsTable(bookings);
+      }
+      // Users (from profiles table)
+      if (currentRole === 'admin') {
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, email');
+        if (usersError) {
+          document.getElementById('user-emails-table-container').innerHTML = '<p style="color:#b6c7e3;">No users found.</p>';
+          return;
+        }
+        renderUsersList(users);
+        document.querySelector('.user-emails-tile').style.display = '';
+      } else {
+        document.querySelector('.user-emails-tile').style.display = 'none';
+      }
+    }
+
+    // --- Token/session expiry handling ---
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!session || isTokenExpired(session)) {
+        currentUser = null;
+        showSection(false);
+        showAlert('Session expired. Please log in again.', 'error');
+  }
+});
+
+    // --- On Load ---
+    window.addEventListener('DOMContentLoaded', checkSessionAndInit);
+
+    // Spotlight effect on card that follows mouse
+    const container = document.querySelector('.container');
+    if (container) {
+      container.addEventListener('mousemove', function(e) {
+        const rect = container.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        container.style.setProperty('--spot-x', `${x}%`);
+        container.style.setProperty('--spot-y', `${y}%`);
+        container.style.setProperty('--spot-opacity', '1');
+      });
+      container.addEventListener('mouseleave', function() {
+        container.style.setProperty('--spot-x', '50%');
+        container.style.setProperty('--spot-y', '50%');
+        container.style.setProperty('--spot-opacity', '0');
+      });
+    }
+
+    // Booking search bar logic
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('booking-search');
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          renderBookingsTable(allBookings);
+        });
+      }
+    });
+
+    // Inline edit for bookings table
+    async function handleBookingEdit(e, booking, field) {
+      const td = e.target;
+      if (td.querySelector('input') || td.querySelector('select')) return; // already editing
+      const oldValue = booking[field] || '';
+      let input;
+      if (field === 'event_type') {
+        input = document.createElement('select');
+        ['Mehndi','Barat','Walima'].forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt;
+          option.textContent = opt;
+          if (opt === oldValue) option.selected = true;
+          input.appendChild(option);
+        });
+        input.style.width = '100%';
+        input.style.background = '#10192b';
+        input.style.color = '#eaf1fa';
+        input.style.border = '1.5px solid #3b82f6';
+        input.style.borderRadius = '6px';
+        input.style.padding = '6px 8px';
+        input.style.fontSize = '1em';
+        input.style.outline = 'none';
+        input.style.boxShadow = '0 1px 4px #2563eb22';
+      } else {
+        input = document.createElement('input');
+        input.type = field === 'date' ? 'date' : 'text';
+        input.value = oldValue;
+        input.style.width = '100%';
+        input.style.background = '#10192b';
+        input.style.color = '#eaf1fa';
+        input.style.border = '1.5px solid #3b82f6';
+        input.style.borderRadius = '6px';
+        input.style.padding = '6px 8px';
+        input.style.fontSize = '1em';
+        input.style.outline = 'none';
+        input.style.boxShadow = '0 1px 4px #2563eb22';
+      }
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus();
+      if (field !== 'event_type') input.select();
+      let saved = false;
+      async function saveEdit() {
+        const newValue = field === 'event_type' ? input.value : input.value.trim();
+        if (newValue === oldValue) { td.textContent = oldValue; return; }
+        // Update in Supabase using booking.id
+        if (!booking.id) {
+          showAlert('Booking id missing. Cannot update.', 'error');
+          td.textContent = oldValue;
+          return;
+        }
+        const { error } = await supabase.from('bookings').update({ [field]: newValue }).eq('id', booking.id);
+        if (error) {
+          showAlert('Failed to update booking: ' + error.message, 'error');
+          td.textContent = oldValue;
+        } else {
+          td.textContent = newValue;
+          showAlert('Booking updated!', 'success', 2000);
+          // Update the booking object in allBookings and re-render the table with the new value
+          booking[field] = newValue;
+          renderBookingsTable(allBookings);
+        }
+        saved = true;
+      }
+      if (field === 'event_type') {
+        input.addEventListener('change', saveEdit);
+        input.addEventListener('blur', () => { if (!saved) td.textContent = oldValue; });
+        input.addEventListener('keydown', async (ev) => {
+          if (ev.key === 'Enter') { await saveEdit(); }
+          if (ev.key === 'Escape') { td.textContent = oldValue; saved = true; }
+        });
+      } else {
+        input.addEventListener('keydown', async (ev) => {
+          if (ev.key === 'Enter') { await saveEdit(); }
+          if (ev.key === 'Escape') { td.textContent = oldValue; saved = true; }
+        });
+        input.addEventListener('blur', async () => { if (!saved) td.textContent = oldValue; });
+      }
+    }
+  </script>
+</body>
+</html>

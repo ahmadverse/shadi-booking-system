@@ -1,0 +1,48 @@
+📅 Day 1 - Logic Journal
+
+✅ What I built:
+- Flask To-Do App
+
+🔍 What logic I saw:
+- If `tasks` is not empty, show the list
+- For each `task`, show its title and delete link
+- `POST` adds task, `GET` deletes it
+
+🧠 Why this matters:
+- This is how every app works — input ➜ logic ➜ output
+- I finally saw how Python logic connects to HTML using Jinja2
+
+
+
+
+📅 Day 2 - Logic Journal
+
+✅ What I built:
+- Web Calculator App (Flask)
+
+🔍 What logic I saw:
+- Inputs sent using HTML <form> POST method
+- Flask receives input → uses logic (if-elif-else)
+- Function-like structure decides the result
+
+🧠 Why this matters:
+- All web apps collect data, process it, and return something
+- Now I see how the whole "input → function → output" cycle works
+
+
+
+📅 Day 3 - Logic Journal
+
+✅ What I built:
+- Login/Register App using Flask sessions
+
+🔍 What logic I saw:
+- Forms collect username/password
+- Server checks credentials
+- Sessions keep user logged in
+- Logout clears session
+
+🧠 Why this matters:
+- Every app needs login
+- Now I understand how “remember me” works using sessions
+
