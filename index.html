@@ -584,17 +584,74 @@
         bookingsTableContainer.innerHTML = '<p>No bookings found.</p>';
         return;
       }
-      let html = `<table><thead><tr><th>Event Type</th><th>Name</th><th style='min-width:120px;width:22%'>Date</th><th>Phone</th></tr></thead><tbody>`;
+      let html = `<table><thead><tr><th>Event Type</th><th>Name</th><th style='min-width:120px;width:22%'>Date</th><th>Phone</th><th>Action</th></tr></thead><tbody>`;
       for (const b of filtered) {
         html += `<tr class=\"booking-row\">`;
         html += `<td class=\"editable-cell\" data-field=\"event_type\">${b.event_type}</td>`;
         html += `<td class=\"editable-cell\" data-field=\"name\">${b.name}</td>`;
         html += `<td class=\"editable-cell\" data-field=\"date\" style='min-width:120px;width:22%'>${b.date}</td>`;
         html += `<td class=\"editable-cell\" data-field=\"phone\">${b.phone}</td>`;
+        html += `<td><button class="delete-booking-btn" data-booking-id="${b.id}" title="Delete Booking" style="background:transparent;border:none;color:#f87171;font-size:1.2em;cursor:pointer;padding:4px;border-radius:4px;transition:background 0.2s;">&#128465;</button></td>`;
         html += `</tr>`;
       }
       html += '</tbody></table>';
       bookingsTableContainer.innerHTML = html;
+
+      // Add delete button listeners
+      document.querySelectorAll('.delete-booking-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const bookingId = this.getAttribute('data-booking-id');
+          const row = this.closest('tr');
+          
+          console.log('=== DELETE BOOKING START ===');
+          console.log('Booking ID:', bookingId);
+          
+          if (!row) {
+            showAlert('Could not find booking row.', 'error');
+            return;
+          }
+          
+          if (confirm('Are you sure you want to delete this booking?')) {
+            // Hide row immediately for better UX
+            row.style.display = 'none';
+            
+            try {
+              // Delete from database
+              console.log('Deleting from database...');
+              const { error: deleteError } = await supabase
+                .from('bookings')
+                .delete()
+                .eq('id', bookingId);
+              
+              if (deleteError) {
+                console.error('Delete failed:', deleteError);
+                showAlert('Failed to delete booking: ' + deleteError.message, 'error');
+                row.style.display = '';
+                return;
+              }
+              
+              console.log('Delete successful!');
+              
+              // Success - remove from DOM and array
+              row.remove();
+              allBookings = allBookings.filter(b => b.id != bookingId);
+              
+              console.log('=== DELETE BOOKING SUCCESS ===');
+              showAlert('Booking deleted successfully!', 'success', 2000);
+              
+            } catch (err) {
+              console.error('Delete operation failed:', err);
+              showAlert('Failed to delete booking: ' + err.message, 'error');
+              row.style.display = '';
+            }
+          }
+        });
+        btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(248,113,113,0.2)');
+        btn.addEventListener('mouseleave', () => btn.style.background = 'transparent');
+      });
 
       // Add inline edit listeners
       document.querySelectorAll('.booking-row').forEach((row, idx) => {
@@ -724,6 +781,10 @@
       currentRole = profile?.role || 'user';
       userEmailSpan.textContent = user.email;
       showSection(true);
+      
+      // Test database permissions
+      await testDatabasePermissions();
+      
       await loadBookingsAndUsers();
     }
 
@@ -902,14 +963,272 @@
       }
     }
 
+    // Test function to verify database permissions
+    async function testDatabasePermissions() {
+      console.log('=== TESTING DATABASE PERMISSIONS ===');
+      console.log('Current user:', currentUser);
+      console.log('Current role:', currentRole);
+      
+      // Test read permissions
+      const { data: testRead, error: readError } = await supabase
+        .from('bookings')
+        .select('count')
+        .limit(1);
+      console.log('Read test:', { data: testRead, error: readError });
+      
+      // Test delete permissions with a non-existent ID
+      const { data: testDelete, error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', '999999999')
+        .select();
+      console.log('Delete test:', { data: testDelete, error: deleteError });
+    }
+
+    // Comprehensive database diagnostic function
+    window.diagnoseDatabase = async function() {
+      console.log('=== DATABASE DIAGNOSTIC START ===');
+      
+      try {
+        // 1. Check if user is authenticated
+        console.log('1. Checking authentication...');
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('❌ Authentication failed:', userError);
+          return;
+        }
+        console.log('✅ User authenticated:', user.email);
+        
+        // 2. Check user role
+        console.log('2. Checking user role...');
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileError) {
+          console.error('❌ Role check failed:', profileError);
+        } else {
+          console.log('✅ User role:', profile.role);
+        }
+        
+        // 3. Test read permissions
+        console.log('3. Testing read permissions...');
+        const { data: bookings, error: readError } = await supabase
+          .from('bookings')
+          .select('*')
+          .limit(5);
+        
+        if (readError) {
+          console.error('❌ Read permission failed:', readError);
+        } else {
+          console.log('✅ Read permission works. Found', bookings.length, 'bookings');
+        }
+        
+        // 4. Test insert permissions (if user has bookings)
+        if (bookings && bookings.length > 0) {
+          console.log('4. Testing update permissions...');
+          const testBooking = bookings[0];
+          const { data: updateResult, error: updateError } = await supabase
+            .from('bookings')
+            .update({ name: testBooking.name }) // Update with same value
+            .eq('id', testBooking.id)
+            .select();
+          
+          if (updateError) {
+            console.error('❌ Update permission failed:', updateError);
+          } else {
+            console.log('✅ Update permission works');
+          }
+          
+          // 5. Test delete permissions
+          console.log('5. Testing delete permissions...');
+          const { data: deleteResult, error: deleteError } = await supabase
+            .from('bookings')
+            .delete()
+            .eq('id', '999999999') // Non-existent ID
+            .select();
+          
+          if (deleteError) {
+            console.error('❌ Delete permission failed:', deleteError);
+          } else {
+            console.log('✅ Delete permission works');
+          }
+        }
+        
+        // 6. Check RLS (Row Level Security) policies
+        console.log('6. Checking RLS policies...');
+        console.log('ℹ️  If you see permission errors above, you may need to:');
+        console.log('   - Enable RLS on the bookings table');
+        console.log('   - Create policies for SELECT, UPDATE, DELETE');
+        console.log('   - Ensure policies allow users to modify their own bookings');
+        console.log('   - Ensure admins can modify all bookings');
+        
+        console.log('=== DATABASE DIAGNOSTIC COMPLETE ===');
+        
+      } catch (err) {
+        console.error('Diagnostic failed:', err);
+      }
+    };
+
+    // Manual test function for delete functionality
+    window.testDeleteBooking = async function(bookingId) {
+      console.log('=== MANUAL DELETE TEST ===');
+      console.log('Testing delete for booking ID:', bookingId);
+      
+      try {
+        // First, check if the booking exists
+        const { data: existingBooking, error: readError } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('id', bookingId)
+          .single();
+        
+        console.log('Existing booking:', existingBooking);
+        
+        if (readError) {
+          console.error('Booking not found:', readError);
+          return;
+        }
+        
+        // Try to delete the booking
+        const { data: deleteResult, error: deleteError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', bookingId)
+          .select();
+        
+        console.log('Delete result:', deleteResult);
+        console.log('Delete error:', deleteError);
+        
+        if (deleteError) {
+          console.error('Delete failed:', deleteError);
+        } else {
+          console.log('Delete successful!');
+          
+          // Verify deletion
+          const { data: verifyBooking, error: verifyError } = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('id', bookingId)
+            .single();
+          
+          if (verifyBooking) {
+            console.error('Booking still exists after deletion!');
+          } else {
+            console.log('Deletion verified - booking no longer exists in database');
+          }
+        }
+        
+      } catch (err) {
+        console.error('Test failed:', err);
+      }
+    };
+
+    // Test function for update functionality
+    window.testUpdateBooking = async function(bookingId, field, newValue) {
+      console.log('=== MANUAL UPDATE TEST ===');
+      console.log('Testing update for booking ID:', bookingId, 'field:', field, 'value:', newValue);
+      
+      try {
+        // Try to update the booking
+        const { data: updateResult, error: updateError } = await supabase
+          .from('bookings')
+          .update({ [field]: newValue })
+          .eq('id', bookingId)
+          .select();
+        
+        console.log('Update result:', updateResult);
+        console.log('Update error:', updateError);
+        
+        if (updateError) {
+          console.error('Update failed:', updateError);
+        } else {
+          console.log('Update successful!');
+        }
+        
+      } catch (err) {
+        console.error('Update test failed:', err);
+      }
+    };
+
+    // Test function to verify everything is working after database fix
+    window.testAllOperations = async function() {
+      console.log('=== TESTING ALL OPERATIONS AFTER DATABASE FIX ===');
+      
+      try {
+        // Get current user and bookings
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select('*')
+          .limit(1);
+        
+        if (!user) {
+          console.log('❌ No user logged in');
+          return;
+        }
+        
+        if (!bookings || bookings.length === 0) {
+          console.log('ℹ️  No bookings to test with');
+          return;
+        }
+        
+        const testBooking = bookings[0];
+        console.log('✅ Testing with booking:', testBooking);
+        
+        // Test update
+        console.log('Testing UPDATE...');
+        const { data: updateResult, error: updateError } = await supabase
+          .from('bookings')
+          .update({ name: testBooking.name + ' (test)' })
+          .eq('id', testBooking.id)
+          .select();
+        
+        if (updateError) {
+          console.log('❌ Update failed:', updateError);
+        } else {
+          console.log('✅ Update successful:', updateResult);
+          
+          // Revert the test change
+          await supabase
+            .from('bookings')
+            .update({ name: testBooking.name })
+            .eq('id', testBooking.id);
+          console.log('✅ Reverted test change');
+        }
+        
+        // Test delete (with non-existent ID to be safe)
+        console.log('Testing DELETE...');
+        const { data: deleteResult, error: deleteError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', '999999999')
+          .select();
+        
+        if (deleteError) {
+          console.log('❌ Delete failed:', deleteError);
+        } else {
+          console.log('✅ Delete operation works (no rows affected as expected)');
+        }
+        
+        console.log('=== ALL TESTS COMPLETE ===');
+        console.log('🎉 If you see ✅ marks above, your database is working correctly!');
+        console.log('💡 You can now try deleting and updating bookings in the UI.');
+        
+      } catch (err) {
+        console.error('Test failed:', err);
+      }
+    };
+
     // --- Token/session expiry handling ---
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (!session || isTokenExpired(session)) {
         currentUser = null;
         showSection(false);
-        showAlert('Session expired. Please log in again.', 'error');
-  }
-});
+      }
+    });
 
     // --- On Load ---
     window.addEventListener('DOMContentLoaded', checkSessionAndInit);
@@ -988,23 +1307,52 @@
       async function saveEdit() {
         const newValue = field === 'event_type' ? input.value : input.value.trim();
         if (newValue === oldValue) { td.textContent = oldValue; return; }
+        
         // Update in Supabase using booking.id
         if (!booking.id) {
           showAlert('Booking id missing. Cannot update.', 'error');
           td.textContent = oldValue;
           return;
         }
-        const { error } = await supabase.from('bookings').update({ [field]: newValue }).eq('id', booking.id);
-        if (error) {
-          showAlert('Failed to update booking: ' + error.message, 'error');
-          td.textContent = oldValue;
-        } else {
+        
+        try {
+          console.log('Updating booking:', booking.id, field, 'from', oldValue, 'to', newValue);
+          
+          const { data, error } = await supabase
+            .from('bookings')
+            .update({ [field]: newValue })
+            .eq('id', booking.id)
+            .select();
+          
+          console.log('Update response:', { data, error });
+          
+          if (error) {
+            console.error('Update failed:', error);
+            showAlert('Failed to update booking: ' + error.message, 'error');
+            td.textContent = oldValue;
+            return;
+          }
+          
+          // Success - update the UI and local data
           td.textContent = newValue;
-          showAlert('Booking updated!', 'success', 2000);
-          // Update the booking object in allBookings and re-render the table with the new value
           booking[field] = newValue;
-          renderBookingsTable(allBookings);
+          
+          // Update the booking in allBookings array
+          const bookingIndex = allBookings.findIndex(b => b.id === booking.id);
+          if (bookingIndex !== -1) {
+            allBookings[bookingIndex][field] = newValue;
+          }
+          
+          showAlert('Booking updated successfully!', 'success', 2000);
+          
+          // Don't reload data automatically - let the update persist
+          
+        } catch (err) {
+          console.error('Update operation failed:', err);
+          showAlert('Failed to update booking: ' + err.message, 'error');
+          td.textContent = oldValue;
         }
+        
         saved = true;
       }
       if (field === 'event_type') {
