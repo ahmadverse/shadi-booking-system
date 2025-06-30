@@ -435,17 +435,18 @@
     }
     #booking-search {
       width: 100%;
-      padding: 0 0 0 0;
+      box-sizing: border-box;
+      padding: 0 0 0 10px;
+      margin-top: 10px;
       border: none;
       background: transparent;
       color: #eaf1fa;
       font-size: 1.08em;
       border-radius: 999px;
       outline: none;
-      height: 44px;
-      line-height: 44px;
-      display: flex;
-      align-items: center;
+      height: 48px;
+      line-height: 48px;
+      display: block;
       transition: background 0.2s, color 0.2s;
     }
   </style>
@@ -489,7 +490,7 @@
           <div class="search-bar-card">
             <div class="search-bar-inner">
               <span class="search-icon">&#128269;</span>
-              <input id="booking-search" type="text" placeholder="Search bookings by name..." />
+              <input id="booking-search" type="text" placeholder="Search bookings by name, phone, or event type" />
             </div>
           </div>
           <h3>Your Bookings</h3>
@@ -578,7 +579,12 @@
       const searchValue = (document.getElementById('booking-search')?.value || '').toLowerCase();
       let filtered = bookings;
       if (searchValue) {
-        filtered = bookings.filter(b => b.name && b.name.toLowerCase().includes(searchValue));
+        filtered = bookings.filter(b => {
+          const nameMatch = b.name && b.name.toLowerCase().includes(searchValue);
+          const eventTypeMatch = b.event_type && b.event_type.toLowerCase().includes(searchValue);
+          const phoneMatch = b.phone && b.phone.toLowerCase().includes(searchValue);
+          return nameMatch || eventTypeMatch || phoneMatch;
+        });
       }
       if (!filtered.length) {
         bookingsTableContainer.innerHTML = '<p>No bookings found.</p>';
