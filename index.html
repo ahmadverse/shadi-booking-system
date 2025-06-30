@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shadi Booking System</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
   <style>
     html, body {
@@ -91,26 +92,22 @@
       border: 1.5px solid rgba(255,255,255,0.18);
     }
     .main-flex {
-      display: flex;
-      gap: 32px;
-      align-items: flex-start;
-      justify-content: space-between;
+      display: block;
     }
-    .sidebar-bookings {
-      flex: 1 1 500px;
-      max-width: 500px;
+    .expanded-booking-users {
+      width: 100%;
       background: rgba(16, 25, 43, 0.98);
       border-radius: 22px;
       box-shadow: 0 4px 24px #1e3a8a33, 0 1.5px 8px #0002;
-      padding: 24px 18px 18px 18px;
+      padding: 32px 24px 24px 24px;
       margin-bottom: 18px;
       min-width: 0;
       transition: box-shadow 0.3s, background 0.3s;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 32px;
     }
-    .sidebar-bookings h3 {
+    .expanded-booking-users h3, .expanded-booking-users h4 {
       margin-top: 0;
       margin-bottom: 18px;
       font-size: 1.25rem;
@@ -118,55 +115,6 @@
       font-weight: 600;
       letter-spacing: 0.01em;
       text-align: left;
-    }
-    .bookings-table-container {
-      width: 100%;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: transparent;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 1px 8px #1e3a8a22;
-      transition: background 0.3s;
-    }
-    th, td {
-      border: none;
-      padding: 12px 10px;
-      text-align: left;
-      font-size: 1em;
-      background: transparent;
-    }
-    th {
-      background: #1e3a8a;
-      color: #eaf1fa;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-    }
-    tr.booking-row {
-      transition: background 0.4s, box-shadow 0.3s;
-      border-radius: 10px;
-      position: relative;
-      z-index: 1;
-    }
-    tr.booking-row:hover {
-      background: linear-gradient(90deg, rgba(59,130,246,0.18) 0%, rgba(236,72,153,0.18) 50%, rgba(16,185,129,0.18) 100%);
-      box-shadow: 0 2px 16px 0 rgba(59,130,246,0.18), 0 1.5px 8px 0 #0002;
-      z-index: 2;
-      animation: rgbglow 2.5s linear infinite alternate;
-    }
-    @keyframes rgbglow {
-      0% { box-shadow: 0 2px 16px 0 rgba(59,130,246,0.18), 0 1.5px 8px 0 #0002; }
-      50% { box-shadow: 0 4px 24px 0 rgba(236,72,153,0.22), 0 1.5px 8px 0 #0002; }
-      100% { box-shadow: 0 2px 16px 0 rgba(16,185,129,0.18), 0 1.5px 8px 0 #0002; }
-    }
-    .right-content {
-      flex: 2 1 420px;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
     }
     .user-info {
       margin-bottom: 10px;
@@ -449,11 +397,206 @@
       display: block;
       transition: background 0.2s, color 0.2s;
     }
+    /* Modal and Blur */
+    #booking-modal-blur {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(20,24,40,0.45);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+    }
+    #booking-modal {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(24,32,56,0.98);
+      border-radius: 18px;
+      box-shadow: 0 8px 32px 0 rgba(30, 58, 138, 0.25), 0 1.5px 8px 0 #0002;
+      padding: 32px 24px 24px 24px;
+      z-index: 1001;
+      min-width: 320px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: none;
+    }
+    #booking-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 2em;
+      cursor: pointer;
+      z-index: 1002;
+    }
+    @media (max-width: 600px) {
+      #booking-modal {
+        min-width: 90vw;
+        padding: 18px 6vw 18px 6vw;
+      }
+    }
+
+    /* Remove floating plus button styles and add inline styles for the plus button next to the heading */
+    #open-booking-modal-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 12px;
+      background: linear-gradient(90deg, #2563eb 0%, #1e3a8a 100%);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 1.3em;
+      box-shadow: 0 2px 8px #1e3a8a33;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      vertical-align: middle;
+    }
+    #open-booking-modal-btn:hover, #open-booking-modal-btn:focus {
+      background: linear-gradient(90deg, #1e40af 0%, #2563eb 100%);
+      transform: scale(1.08);
+    }
+    @media (max-width: 900px) {
+      #open-booking-modal-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1.1em;
+        margin-left: 8px;
+      }
+    }
+
+    /* User icon and badge */
+    #header-user {
+      display: inline-flex;
+      align-items: center;
+      position: relative;
+      margin-right: 12px;
+    }
+    #user-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e3a8a 60%, #2563eb 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.3em;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #1e3a8a33;
+      position: relative;
+    }
+    #user-circle:hover + #user-tooltip, #user-tooltip:hover {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #user-tooltip {
+      position: absolute;
+      left: 50%;
+      top: 110%;
+      transform: translateX(-50%);
+      background: #23272f;
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 0.98em;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 1003;
+      box-shadow: 0 2px 8px #0004;
+    }
+    #user-badge {
+      position: absolute;
+      bottom: -2px;
+      right: 70px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.75em;
+      font-weight: 700;
+      border-radius: 6px;
+      padding: 2px 7px 2px 7px;
+      box-shadow: 0 1px 4px #0002;
+      border: 2px solid #fff;
+    }
+    @media (max-width: 600px) {
+      #user-circle { width: 32px; height: 32px; font-size: 1em; }
+      #user-tooltip { font-size: 0.92em; }
+      #user-badge { font-size: 0.7em; padding: 1.5px 5px; }
+    }
+    /* Modern Bookings Table Styles */
+    .modern-bookings-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: rgba(24,32,56,0.98);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px #1e3a8a33, 0 1.5px 8px #0002;
+      margin-bottom: 18px;
+      font-size: 1.04em;
+      transition: box-shadow 0.3s, background 0.3s;
+    }
+    .modern-bookings-table th, .modern-bookings-table td {
+      padding: 14px 12px;
+      text-align: left;
+      border: none;
+    }
+    .modern-bookings-table th {
+      background: linear-gradient(90deg, #233a5e 0%, #1e3a8a 100%);
+      color: #eaf1fa;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      font-size: 1.08em;
+      border-bottom: 2px solid #2563eb44;
+    }
+    .modern-bookings-table tr:nth-child(even) td {
+      background: #10192b;
+    }
+    .modern-bookings-table tr:nth-child(odd) td {
+      background: #172554;
+    }
+    .modern-bookings-table tr:hover td {
+      background: linear-gradient(90deg, #1e3a8a33 0%, #2563eb33 100%);
+      color: #fff;
+      transition: background 0.2s, color 0.2s;
+    }
+    .modern-bookings-table td {
+      border-bottom: 1px solid #233a5e44;
+      font-size: 1.01em;
+      color: #eaf1fa;
+      transition: background 0.2s, color 0.2s;
+    }
+    .modern-bookings-table tr:last-child td {
+      border-bottom: none;
+    }
+    @media (max-width: 700px) {
+      .modern-bookings-table th, .modern-bookings-table td {
+        padding: 8px 4px;
+        font-size: 0.97em;
+      }
+      .modern-bookings-table {
+        font-size: 0.97em;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Shadi Booking System <button id="logout-btn" class="hidden">Logout</button></h2>
+    <h2 style="display: flex; align-items: center; justify-content: space-between;">
+      Shadi Booking System
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <!-- header-user will be inserted here by JS only after login -->
+        <button id="logout-btn" class="hidden">Logout</button>
+      </div>
+    </h2>
     <div id="alert-container"></div>
     <div id="auth-section">
       <div id="auth-choice" style="display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 32px 0;">
@@ -462,10 +605,16 @@
       </div>
       <form id="signup-form" style="display:none; max-width: 340px; margin: 0 auto;">
         <h3>Sign Up</h3>
+        <label for="signup-name">Full Name</label>
+        <input type="text" id="signup-name" required minlength="2" />
+        <label for="signup-cnic">CNIC (National ID)</label>
+        <input type="text" id="signup-cnic" required pattern="[0-9]{5}-[0-9]{7}-[0-9]{1}" placeholder="e.g. 12345-1234567-1" />
         <label for="signup-email">Email</label>
-        <input type="email" id="signup-email" required />
+        <input type="email" id="signup-email" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" />
         <label for="signup-password">Password</label>
-        <input type="password" id="signup-password" required minlength="6" />
+        <input type="password" id="signup-password" required minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" title="Must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character" />
+        <label for="signup-confirm-password">Confirm Password</label>
+        <input type="password" id="signup-confirm-password" required />
         <label for="signup-role">Role</label>
         <select id="signup-role" required>
           <option value="user">User</option>
@@ -485,45 +634,67 @@
       </form>
     </div>
     <div id="booking-section" class="hidden">
+      <div id="booking-modal-blur"></div>
+      <div id="booking-modal">
+        <button id="booking-modal-close" title="Close">&times;</button>
+        <form id="booking-form-modal">
+          <h3>Submit Booking</h3>
+          <label for="event-type-modal">Event Type</label>
+          <select id="event-type-modal" required>
+            <option value="">Select Event</option>
+            <option value="Mehndi">Mehndi</option>
+            <option value="Barat">Barat</option>
+            <option value="Walima">Walima</option>
+          </select>
+          <label for="name-modal">Name</label>
+          <input type="text" id="name-modal" required />
+          <label for="date-modal">Date</label>
+          <input type="date" id="date-modal" required />
+          <label for="time-modal">Time</label>
+          <input type="time" id="time-modal" required />
+          <label for="phone-modal">Phone</label>
+          <input type="tel" id="phone-modal" required pattern="[0-9\-\+\s]{7,15}" />
+          <button type="submit">Submit Booking</button>
+        </form>
+      </div>
       <div class="main-flex">
-        <aside class="sidebar-bookings">
+        <div class="expanded-booking-users">
+          <div class="bookings-heading-row" style="display: flex; align-items: center; gap: 0.5em; margin-bottom: 8px;">
+            <h3 id="main-bookings-heading" style="margin: 0;">My Bookings</h3>
+            <button id="open-booking-modal-btn" title="Add Booking">+</button>
+          </div>
           <div class="search-bar-card">
             <div class="search-bar-inner">
               <span class="search-icon">&#128269;</span>
               <input id="booking-search" type="text" placeholder="Search bookings by name, phone, or event type" />
             </div>
           </div>
-          <h3>Your Bookings</h3>
+          <h3 id="bookings-role-heading">Your Bookings</h3>
           <div class="bookings-table-container" id="bookings-table-container"></div>
           <div class="user-emails-tile">
-            <h4>All User Emails</h4>
+            <h4>All Users</h4>
+            <div class="search-bar-card">
+              <div class="search-bar-inner">
+                <span class="search-icon">&#128269;</span>
+                <input id="user-search" type="text" placeholder="Search users by name, email, or CNIC" />
+              </div>
+            </div>
             <div id="user-emails-table-container"></div>
           </div>
-        </aside>
+        </div>
         <section class="right-content">
           <div class="user-info">Logged in as: <span id="user-email"></span></div>
-          <form id="booking-form">
-            <h3>Submit Booking</h3>
-            <label for="event-type">Event Type</label>
-            <select id="event-type" required>
-              <option value="">Select Event</option>
-              <option value="Mehndi">Mehndi</option>
-              <option value="Barat">Barat</option>
-              <option value="Walima">Walima</option>
-            </select>
-            <label for="name">Name</label>
-            <input type="text" id="name" required />
-            <label for="date">Date</label>
-            <input type="date" id="date" required />
-            <label for="phone">Phone</label>
-            <input type="tel" id="phone" required pattern="[0-9\-\+\s]{7,15}" />
-            <button type="submit">Submit Booking</button>
-          </form>
         </section>
       </div>
     </div>
   </div>
   <script>
+    // Always hide header-user on initial load to prevent flash before session check
+    document.addEventListener('DOMContentLoaded', function() {
+      var headerUser = document.getElementById('header-user');
+      if (headerUser) headerUser.classList.add('hidden');
+    });
+
     // --- Supabase Setup ---
     const SUPABASE_URL = 'https://xdhfxbltvjvecyocbdst.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkaGZ4Ymx0dmp2ZWN5b2NiZHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTk5OTksImV4cCI6MjA2NjczNTk5OX0.1DyO-qKkukcW9G0_HlMQ2xKV0eosE2iLRxKz4TMg_ds';
@@ -542,7 +713,6 @@
     const signupForm = document.getElementById('signup-form');
     const loginForm = document.getElementById('login-form');
     const logoutBtn = document.getElementById('logout-btn');
-    const bookingForm = document.getElementById('booking-form');
     const bookingsTableContainer = document.getElementById('bookings-table-container');
     const userEmailSpan = document.getElementById('user-email');
 
@@ -551,6 +721,7 @@
     let currentRole = null;
     let selectedUserId = null;
     let allBookings = [];
+    let allUsers = [];
 
     // --- Utility Functions ---
     function showAlert(message, type = 'success', timeout = 4000) {
@@ -561,16 +732,36 @@
     }
     function clearAlert() { alertContainer.innerHTML = ''; }
     function showSection(isLoggedIn) {
+      const headerUser = document.getElementById('header-user');
+      const headerUserContainer = document.querySelector('h2 > div');
       if (isLoggedIn) {
         authSection.style.display = 'none';
         bookingSection.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         document.body.classList.add('logged-in');
+        // Insert header-user if not present
+        if (!document.getElementById('header-user')) {
+          const span = document.createElement('span');
+          span.id = 'header-user';
+          span.innerHTML = `
+            <button id="user-circle-btn" style="background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center;">
+              <span id="user-circle"><i class="fa fa-user"></i></span>
+            </button>
+            <span id="user-badge">${currentRole === 'admin' ? 'ADMIN' : 'USER'}</span>
+          `;
+          span.style.display = 'inline-flex';
+          span.style.alignItems = 'center';
+          span.style.position = 'relative';
+          span.style.marginRight = '12px';
+          if (headerUserContainer) headerUserContainer.insertBefore(span, headerUserContainer.firstChild);
+        }
       } else {
         authSection.style.display = '';
         bookingSection.classList.add('hidden');
         logoutBtn.classList.add('hidden');
         document.body.classList.remove('logged-in');
+        // Remove header-user if present
+        if (headerUser) headerUser.remove();
         showAuthChoice();
       }
     }
@@ -590,12 +781,13 @@
         bookingsTableContainer.innerHTML = '<p>No bookings found.</p>';
         return;
       }
-      let html = `<table><thead><tr><th>Event Type</th><th>Name</th><th style='min-width:120px;width:22%'>Date</th><th>Phone</th><th>Action</th></tr></thead><tbody>`;
+      let html = `<table class="modern-bookings-table"><thead><tr><th>Event Type</th><th>Name</th><th style='min-width:120px;width:18%'>Date</th><th style='min-width:90px;width:14%'>Time</th><th>Phone</th><th>Action</th></tr></thead><tbody>`;
       for (const b of filtered) {
         html += `<tr class=\"booking-row\">`;
         html += `<td class=\"editable-cell\" data-field=\"event_type\">${b.event_type}</td>`;
         html += `<td class=\"editable-cell\" data-field=\"name\">${b.name}</td>`;
-        html += `<td class=\"editable-cell\" data-field=\"date\" style='min-width:120px;width:22%'>${b.date}</td>`;
+        html += `<td class=\"editable-cell\" data-field=\"date\" style='min-width:120px;width:18%'>${b.date}</td>`;
+        html += `<td class=\"editable-cell\" data-field=\"time\" style='min-width:90px;width:14%'>${b.time || ''}</td>`;
         html += `<td class=\"editable-cell\" data-field=\"phone\">${b.phone}</td>`;
         html += `<td><button class="delete-booking-btn" data-booking-id="${b.id}" title="Delete Booking" style="background:transparent;border:none;color:#f87171;font-size:1.2em;cursor:pointer;padding:4px;border-radius:4px;transition:background 0.2s;">&#128465;</button></td>`;
         html += `</tr>`;
@@ -664,8 +856,8 @@
         const booking = filtered[idx];
         row.querySelectorAll('.editable-cell').forEach(cell => {
           const field = cell.getAttribute('data-field');
-          // Allow editing name, phone, date, event_type
-          if (["name","phone","date","event_type"].includes(field) && (currentRole === 'admin' || (currentUser && booking.user_id === currentUser.id))) {
+          // Allow editing name, phone, date, event_type, time
+          if (["name","phone","date","event_type","time"].includes(field) && (currentRole === 'admin' || (currentUser && booking.user_id === currentUser.id))) {
             cell.style.cursor = 'pointer';
             cell.title = 'Click to edit';
             cell.addEventListener('click', (e) => handleBookingEdit(e, booking, field));
@@ -676,17 +868,24 @@
       });
     }
     function renderUsersList(users) {
-      if (!users || users.length === 0) {
+      allUsers = users;
+      const searchValue = (document.getElementById('user-search')?.value || '').toLowerCase();
+      let filtered = users;
+      if (searchValue) {
+        filtered = users.filter(u => {
+          const nameMatch = u.name && u.name.toLowerCase().includes(searchValue);
+          const emailMatch = u.email && u.email.toLowerCase().includes(searchValue);
+          const cnicMatch = u.cnic && u.cnic.toLowerCase().includes(searchValue);
+          return nameMatch || emailMatch || cnicMatch;
+        });
+      }
+      if (!filtered || filtered.length === 0) {
         document.getElementById('user-emails-table-container').innerHTML = '<p style="color:#b6c7e3;">No users found.</p>';
         return;
       }
-      let html = `<table class="user-emails-table"><thead><tr><th>#</th><th>Email</th><th>Action</th></tr></thead><tbody>`;
-      users.forEach((u, i) => {
-        html += `<tr class="user-row" data-user-id="${u.id}" style="cursor:pointer;${selectedUserId === u.id ? 'background:rgba(59,130,246,0.18);' : ''}">
-          <td>${i + 1}</td>
-          <td>${u.email}</td>
-          <td><button class="delete-user-btn" data-user-id="${u.id}" title="Delete User" style="background:transparent;border:none;color:#f87171;font-size:1.2em;cursor:pointer;">&#128465;</button></td>
-        </tr>`;
+      let html = `<table class="user-emails-table"><thead><tr><th>#</th><th>Name</th><th>CNIC</th><th>Email</th><th>Action</th></tr></thead><tbody>`;
+      filtered.forEach((u, i) => {
+        html += `<tr class="user-row" data-user-id="${u.id}" style="cursor:pointer;${selectedUserId === u.id ? 'background:rgba(59,130,246,0.18);' : ''}"><td>${i + 1}</td><td>${u.name || ''}</td><td>${u.cnic || ''}</td><td>${u.email}</td><td><button class="delete-user-btn" data-user-id="${u.id}" title="Delete User" style="background:transparent;border:none;color:#f87171;font-size:1.2em;cursor:pointer;">&#128465;</button></td></tr>`;
       });
       html += '</tbody></table>';
       document.getElementById('user-emails-table-container').innerHTML = html;
@@ -701,6 +900,7 @@
           loadBookingsAndUsers();
         });
       });
+
       // Add click listeners for delete buttons
       document.querySelectorAll('.delete-user-btn').forEach(btn => {
         btn.addEventListener('click', async function(e) {
@@ -730,7 +930,7 @@
                 const tds = row.querySelectorAll('td');
                 users.push({
                   id: row.getAttribute('data-user-id'),
-                  email: tds[1].textContent
+                  email: tds[3].textContent
                 });
               }
             });
@@ -743,6 +943,7 @@
           }
         });
       });
+
       // Add a 'Show All' button if a user is selected
       if (selectedUserId) {
         const showAllBtn = document.createElement('button');
@@ -824,18 +1025,67 @@
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearAlert();
+      
+      // Get all form values
+      const name = document.getElementById('signup-name').value.trim();
+      const cnic = document.getElementById('signup-cnic').value.trim();
       const email = document.getElementById('signup-email').value.trim();
       const password = document.getElementById('signup-password').value;
+      const confirmPassword = document.getElementById('signup-confirm-password').value;
       const role = document.getElementById('signup-role').value;
+
+      // Validate name
+      if (name.length < 2) {
+        showAlert('Name must be at least 2 characters long.', 'error');
+        return;
+      }
+
+      // Validate CNIC format
+      const cnicRegex = /^[0-9]{5}-[0-9]{7}-[0-9]{1}$/;
+      if (!cnicRegex.test(cnic)) {
+        showAlert('CNIC must be in format: 12345-1234567-1', 'error');
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        showAlert('Please enter a valid email address.', 'error');
+        return;
+      }
+
+      // Validate password strength
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(password)) {
+        showAlert('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.', 'error');
+        return;
+      }
+
+      // Check if passwords match
+      if (password !== confirmPassword) {
+        showAlert('Passwords do not match.', 'error');
+        return;
+      }
+
+      // Attempt signup
       const { data, error } = await supabase.auth.signUp({
         email, password
       });
+
       if (error) {
         showAlert('Signup error: ' + error.message, 'error');
         return;
       }
-      // Insert into profiles table (ignore error if already exists)
-      await supabase.from('profiles').upsert({ id: data.user?.id, email, role });
+
+      // Insert into profiles table with additional user data
+      await supabase.from('profiles').upsert({
+        id: data.user?.id,
+        email,
+        role,
+        name,
+        cnic
+      });
+
       // --- Ensure session and user are refreshed after signup ---
       let user = data.user;
       if (!user) {
@@ -894,56 +1144,37 @@
       showAlert('Logged out.', 'success');
     });
 
-    // --- Booking Submission ---
-    bookingForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearAlert();
-      if (!currentUser) {
-        showAlert('You must be logged in to submit bookings.', 'error');
-        return;
-      }
-      const event_type = document.getElementById('event-type').value;
-      const name = document.getElementById('name').value.trim();
-      const date = document.getElementById('date').value;
-      const phone = document.getElementById('phone').value.trim();
-      if (!event_type || !name || !date || !phone) {
-        showAlert('Please fill all fields.', 'error');
-        return;
-      }
-      const { error } = await supabase.from('bookings').insert({
-        event_type, name, date, phone, user_id: currentUser.id
-      });
-      if (error) {
-        showAlert('Booking error: ' + error.message, 'error');
-        return;
-      }
-      showAlert('Booking submitted!', 'success');
-      bookingForm.reset();
-      await loadBookingsAndUsers();
-    });
-
     // --- Load Bookings & Users ---
     async function loadBookingsAndUsers() {
       if (!currentUser) return;
+      // Set bookings headings based on role
+      const bookingsRoleHeading = document.getElementById('bookings-role-heading');
+      const mainBookingsHeading = document.getElementById('main-bookings-heading');
+      if (bookingsRoleHeading) {
+        bookingsRoleHeading.textContent = currentRole === 'admin' ? 'User Bookings' : 'My Bookings';
+      }
+      if (mainBookingsHeading) {
+        mainBookingsHeading.textContent = currentRole === 'admin' ? 'User Bookings' : 'My Bookings';
+      }
       // Bookings
       let bookings, bookingsError;
       if (currentRole === 'admin') {
         if (selectedUserId) {
           ({ data: bookings, error: bookingsError } = await supabase
             .from('bookings')
-            .select('id, event_type, name, date, phone, user_id')
+            .select('id, event_type, name, date, time, phone, user_id')
             .eq('user_id', selectedUserId)
             .order('date', { ascending: true }));
         } else {
           ({ data: bookings, error: bookingsError } = await supabase
             .from('bookings')
-            .select('id, event_type, name, date, phone, user_id')
+            .select('id, event_type, name, date, time, phone, user_id')
             .order('date', { ascending: true }));
         }
       } else {
         ({ data: bookings, error: bookingsError } = await supabase
           .from('bookings')
-          .select('id, event_type, name, date, phone, user_id')
+          .select('id, event_type, name, date, time, phone, user_id')
           .eq('user_id', currentUser.id)
           .order('date', { ascending: true }));
       }
@@ -957,7 +1188,7 @@
       if (currentRole === 'admin') {
         const { data: users, error: usersError } = await supabase
           .from('profiles')
-          .select('id, email');
+          .select('id, email, name, cnic');
         if (usersError) {
           document.getElementById('user-emails-table-container').innerHTML = '<p style="color:#b6c7e3;">No users found.</p>';
           return;
@@ -1291,6 +1522,19 @@
         input.style.fontSize = '1em';
         input.style.outline = 'none';
         input.style.boxShadow = '0 1px 4px #2563eb22';
+      } else if (field === 'time') {
+        input = document.createElement('input');
+        input.type = 'time';
+        input.value = oldValue;
+        input.style.width = '100%';
+        input.style.background = '#10192b';
+        input.style.color = '#eaf1fa';
+        input.style.border = '1.5px solid #3b82f6';
+        input.style.borderRadius = '6px';
+        input.style.padding = '6px 8px';
+        input.style.fontSize = '1em';
+        input.style.outline = 'none';
+        input.style.boxShadow = '0 1px 4px #2563eb22';
       } else {
         input = document.createElement('input');
         input.type = field === 'date' ? 'date' : 'text';
@@ -1308,10 +1552,10 @@
       td.innerHTML = '';
       td.appendChild(input);
       input.focus();
-      if (field !== 'event_type') input.select();
+      if (field !== 'event_type' && field !== 'time') input.select();
       let saved = false;
       async function saveEdit() {
-        const newValue = field === 'event_type' ? input.value : input.value.trim();
+        const newValue = field === 'event_type' ? input.value : (field === 'time' ? input.value : input.value.trim());
         if (newValue === oldValue) { td.textContent = oldValue; return; }
         
         // Update in Supabase using booking.id
@@ -1368,12 +1612,154 @@
           if (ev.key === 'Enter') { await saveEdit(); }
           if (ev.key === 'Escape') { td.textContent = oldValue; saved = true; }
         });
+      } else if (field === 'time') {
+        input.addEventListener('keydown', async (ev) => {
+          if (ev.key === 'Enter') { await saveEdit(); }
+          if (ev.key === 'Escape') { td.textContent = oldValue; saved = true; }
+        });
+        input.addEventListener('blur', () => { if (!saved) td.textContent = oldValue; });
       } else {
         input.addEventListener('keydown', async (ev) => {
           if (ev.key === 'Enter') { await saveEdit(); }
           if (ev.key === 'Escape') { td.textContent = oldValue; saved = true; }
         });
         input.addEventListener('blur', async () => { if (!saved) td.textContent = oldValue; });
+      }
+    }
+
+    // Modal functionality
+    const openBookingModalBtn = document.getElementById('open-booking-modal-btn');
+    const bookingModal = document.getElementById('booking-modal');
+    const bookingModalBlur = document.getElementById('booking-modal-blur');
+    const bookingModalClose = document.getElementById('booking-modal-close');
+    const bookingFormModal = document.getElementById('booking-form-modal');
+
+    function openBookingModal() {
+      bookingModal.style.display = 'block';
+      bookingModalBlur.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeBookingModal() {
+      bookingModal.style.display = 'none';
+      bookingModalBlur.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    openBookingModalBtn.addEventListener('click', openBookingModal);
+    bookingModalClose.addEventListener('click', closeBookingModal);
+    bookingModalBlur.addEventListener('click', closeBookingModal);
+
+    bookingFormModal.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+      if (!currentUser) {
+        showAlert('You must be logged in to submit bookings.', 'error');
+        return;
+      }
+      const event_type = document.getElementById('event-type-modal').value;
+      const name = document.getElementById('name-modal').value.trim();
+      const date = document.getElementById('date-modal').value;
+      const time = document.getElementById('time-modal').value;
+      const phone = document.getElementById('phone-modal').value.trim();
+      if (!event_type || !name || !date || !phone) {
+        showAlert('Please fill all fields.', 'error');
+        return;
+      }
+      if (!time) {
+        showAlert('Please fill all fields.', 'error');
+        return;
+      }
+      const { error } = await supabase.from('bookings').insert({
+        event_type, name, date, time, phone, user_id: currentUser.id
+      });
+      if (error) {
+        showAlert('Booking error: ' + error.message, 'error');
+        return;
+      }
+      showAlert('Booking submitted!', 'success');
+      bookingFormModal.reset();
+      closeBookingModal();
+      await loadBookingsAndUsers();
+    });
+
+    // Update user header with profile icon and badge
+    function updateUserHeader() {
+      const userCircle = document.getElementById('user-circle');
+      const userBadge = document.getElementById('user-badge');
+      if (!userCircle || !userBadge) return;
+
+      // Set badge to role
+      if (currentRole === 'admin') {
+        userBadge.textContent = 'ADMIN';
+        userBadge.style.background = '#ef4444';
+      } else {
+        userBadge.textContent = 'USER';
+        userBadge.style.background = '#ef4444';
+      }
+
+      // Set user icon initial (optional: could use first letter of email or a user icon)
+      userCircle.innerHTML = '<i class="fa fa-user"></i>';
+    }
+
+    // Call updateUserHeader and reattach header events after login, signup, and session check
+    updateUserHeader();
+    reattachUserHeaderEvents();
+
+    // JS for user icon click notification
+    const userCircleBtn = document.getElementById('user-circle-btn');
+    userCircleBtn.addEventListener('click', function(e) {
+      if (!currentUser) return;
+      const tooltip = document.createElement('div');
+      tooltip.id = 'user-tooltip';
+      tooltip.textContent = `Logged in as: ${currentUser.email}`;
+      tooltip.style.opacity = '1';
+      tooltip.style.pointerEvents = 'auto';
+      
+      // Remove any existing tooltip
+      const existingTooltip = document.getElementById('user-tooltip');
+      if (existingTooltip) existingTooltip.remove();
+      
+      // Add new tooltip
+      userCircleBtn.appendChild(tooltip);
+      
+      // Hide after 2.5 seconds
+      setTimeout(() => {
+        tooltip.style.opacity = '0';
+        setTimeout(() => tooltip.remove(), 200);
+      }, 2500);
+    });
+
+    // Add user search functionality
+    let searchTimeout;
+    if (document.getElementById('user-search')) {
+      document.getElementById('user-search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          renderUsersList(allUsers);
+        }, 300); // 300ms debounce delay
+      });
+    }
+
+    // After inserting header-user, re-attach the user-circle-btn event listener
+    function reattachUserHeaderEvents() {
+      const userCircleBtn = document.getElementById('user-circle-btn');
+      if (userCircleBtn) {
+        userCircleBtn.addEventListener('click', function(e) {
+          if (!currentUser) return;
+          const tooltip = document.createElement('div');
+          tooltip.id = 'user-tooltip';
+          tooltip.textContent = `Logged in as: ${currentUser.email}`;
+          tooltip.style.opacity = '1';
+          tooltip.style.pointerEvents = 'auto';
+          const existingTooltip = document.getElementById('user-tooltip');
+          if (existingTooltip) existingTooltip.remove();
+          userCircleBtn.appendChild(tooltip);
+          setTimeout(() => {
+            tooltip.style.opacity = '0';
+            setTimeout(() => tooltip.remove(), 200);
+          }, 2500);
+        });
       }
     }
   </script>
